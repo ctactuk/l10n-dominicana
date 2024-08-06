@@ -42,7 +42,10 @@ class DgiiReport(models.Model):
             else:
                 report.previous_report_pending = False
 
-    name = fields.Char(string='Period', required=True, size=7)
+    name = fields.Char(
+        string='Period', 
+        required=True, size=7
+    )
     state = fields.Selection(
         string="state",
         selection=[
@@ -54,16 +57,20 @@ class DgiiReport(models.Model):
         default='draft',
         copy=False
     )
-    previous_balance = fields.Float('Previous balance', copy=False)
+    previous_balance = fields.Float(
+        string='Previous balance', 
+        copy=False
+    )
     currency_id = fields.Many2one(
-        'res.currency',
+        comodel_name='res.currency',
         string='Currency',
         required=True,
-        default=lambda self: self.env.user.company_id.currency_id)
+        related='company_id.currency_id',
+    )
     company_id = fields.Many2one(
         comodel_name='res.company',
         string='Company',
-        default=lambda self: self.env.user.company_id,
+        default=lambda self: self.env.company,
         required=True
     )
     previous_report_pending = fields.Boolean(
@@ -71,11 +78,13 @@ class DgiiReport(models.Model):
     )
     start_date = fields.Date(
         compute='_compute_dates', 
-        string='Start Date'
+        string='Start Date',
+        store=True
     )
     end_date = fields.Date(
         compute='_compute_dates', 
-        string='End Date'
+        string='End Date',
+        store=True
     )
     
     @api.depends('name')
@@ -421,7 +430,8 @@ class DgiiReport(models.Model):
             ('invoice_date', '<', self.start_date),
             ('company_id', '=', self.company_id.id),
             ('move_type', 'in', types),
-            ('state', 'in', states)
+            ('state', 'in', states),
+            ('is_l10n_do_fiscal_invoice', '=', True)
         ]).filtered(lambda inv: self.get_date_tuple(inv.payment_date if inv.payment_date else inv.invoice_date) == (period.year, period.month))
 
         return invoice_ids
@@ -873,7 +883,7 @@ class DgiiReport(models.Model):
 
             invoice_ids = self._get_invoices(
                 ['cancel'], 
-                ['out_invoice', 'in_invoice', 'out_refund'],
+                ['out_invoice', 'out_refund'],
             )
             line = 0
             report_data = ''
@@ -1732,6 +1742,16 @@ class DgiiReport(models.Model):
         self.state = 'generated'
 
     def generate_report(self):
+        reports_without_sent = self.env['dgii.reports'].search([
+            ('state', '!=', 'sent'),
+            ('company_id', '=', self.company_id.id),
+            ('end_date', '<', self.end_date)
+        ])
+
+        if reports_without_sent:
+            raise ValidationError(
+                _('There are reports that have not been sent yet. Please send them before generating a new one.'))
+
         if self.state == 'generated':
             action = self.env.ref(
                 'dgii_reports.dgii_report_regenerate_wizard_action').read()[0]

@@ -18,7 +18,9 @@ class Partner(models.Model):
     def create(self, vals_list):
         for val in vals_list:
             is_from_vat = val.get('vat', False)
-            rnc = val.get('vat').replace('-', '') if is_from_vat else val.get('name', False).replace('-', '')
+
+            rnc = val.get('vat', '') if is_from_vat else val.get('name', '')
+            rnc = rnc.replace('-', '') if rnc else rnc
 
             if val.get('country_id', False) == self.env.ref('base.do').id and rnc and rnc.isdigit():
                 contact_exist = self.env['res.partner'].search([('vat', '=', rnc)], limit=1)
@@ -50,19 +52,28 @@ class Partner(models.Model):
                     
                     _logger.error(e)
 
-        return super(Partner, self).create(vals_list)
+        res = super(Partner, self).create(vals_list)
+
+        res._compute_sale_fiscal_type_id()
+        
+        return res
 
     def write(self, vals):
-        if vals.get('vat', False) and self.country_id and self.country_id.code == 'DO':
 
-            try:
-                name = self.get_name_from_dgii(vals['vat'])
+        if vals.get('vat', False):
+            dominican_company_parnters = self.filtered(
+                lambda p: p.country_id and p.country_id.code == 'DO' and not p.parent_id)
+                
+            for partner in dominican_company_parnters:
 
-                if name:
-                    vals['name'] = name
+                try:
+                    name = self.get_name_from_dgii(vals['vat'])
 
-            except Exception as e:
-                _logger.error(e)
+                    if name:
+                        vals['name'] = name
+
+                except Exception as e:
+                    _logger.error(e)
 
         return super(Partner, self).write(vals)
 
