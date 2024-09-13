@@ -1,4 +1,5 @@
 simplejson
 zeep
-python-stdnum
+#python-stdnum
+python-stdnum @ git+https://github.com/jeffryjdelarosa/python-stdnum@patch-2
 pycountry
