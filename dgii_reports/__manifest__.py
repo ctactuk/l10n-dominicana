@@ -22,6 +22,12 @@
         'l10n_do',
         'l10n_do_accounting'
     ],
+    # any python dependencies for this one to work correctly
+    'external_dependencies': {
+        'python': [
+            'pycountry',
+        ],
+    },
 
     # always loaded
     'data': [
