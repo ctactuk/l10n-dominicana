@@ -17,6 +17,12 @@
         "account",
         "l10n_do",
     ],
+    # any python dependencies for this one to work correctly
+    'external_dependencies': {
+        'python': [
+            'python-stdnum',
+        ],
+    },
     # always loaded
     "data": [
         "data/ir_config_parameters.xml",
