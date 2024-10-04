@@ -19,6 +19,12 @@
         'l10n_do',
         'l10n_do_accounting',
     ],
+    # any python dependencies for this one to work correctly
+    'external_dependencies': {
+        'python': [
+            'python-stdnum',
+        ],
+    },
     'data': [
         'views/res_partner_views.xml',
     ],
